@@ -16,38 +16,60 @@ const getSolarIrradiance = (hour, cloudCover = 0) => {
     return irradiance * (1 - cloudCover);
 };
 
-const calculatePanelHeatAbsorption = (hour, area, efficiency, cloudCover, T_plate=20, T_ambient=15, U_L=0.68) => {
+const calculatePanelUsefulEnergyGain = (hour, area, mass_flow_rate, efficiency, cloudCover, specificHeat, T_ambient=15,T_plate=20, U_L=8) => {
     // Using Qu=Ac[S−UL(Tplate−Tambient)]
     // Obtain solar irradiance adjusted for hour and cloud cover
-    const solarIrradiance = getSolarIrradiance(hour, cloudCover);
+    const F_prime = efficiency;
+    const capacitance_rate = (mass_flow_rate * specificHeat)/(area * U_L * F_prime);
 
-    // Calculate absorbed heat based on irradiance, solar panel area, and efficiency
-    const absorbedEnergy = solarIrradiance * area * efficiency;
+    F_prime_prime = capacitance_rate * (1 - Math.exp(-1 / capacitance_rate));
 
-    // Calculate heat loss using the heat loss coefficient, difference in temperatures
-    const heatLoss = U_L * (T_plate - T_ambient);
+    F_R = F_prime_prime * F_prime;
+    
+    //convert from w/m2 to mj/m2
+    const solarIrradiance = getSolarIrradiance(hour, cloudCover) * 0.0036
 
-    // Calculate useful energy output incorporating the heat loss
-    const usefulEnergy = area * (absorbedEnergy - heatLoss);
-    console.log(hour, absorbedEnergy, heatLoss, usefulEnergy)
+    const U_L_Temp_Quotient = U_L * (T_plate - T_ambient) * 3600 / 1000000
 
-    return usefulEnergy;
+
+    // Q_u in MJ/m^2 h unit
+    Q_u = F_R * area * (solarIrradiance - U_L_Temp_Quotient);
+    
+
+
+
+    const q_u = Q_u / area;
+    // console.log('HOUR', hour)
+    // console.log('Q_u', Q_u)
+    // console.log('capacitance_rate', capacitance_rate)
+    // console.log('U_L_Temp_Quotient', U_L_Temp_Quotient)
+    // console.log('F_prime', F_prime)
+    // console.log('F_prime_prime', F_prime_prime)
+    // console.log('F_R', F_R)
+    // console.log('solarIrradiance', solarIrradiance)
+    // console.log('U_L', U_L)
+    // console.log('T_plate', T_plate)
+    // console.log('T_ambient', T_ambient)
+    // console.log('q_u', q_u)
+    // console.log('\n')
+    return {q_u: q_u, F_R: F_R}
 };
 
-const calculateHeatTransferToFluid = (heatAbsorbed, currentTemperature, specificHeat, mass, ambientTemperature, timeStep) => {
-    // Calculate the temperature change using Q = c × m × ΔT
-    // Rearranged to solve for ΔT: ΔT = Q / (c × m)
-    const temperatureChange = heatAbsorbed / (specificHeat * mass);
+const calculateHeatTransferToFluid = (solarPanelVars, currentTemperature, U_L=8) => {
 
-    // Update the current temperature
-    return currentTemperature + temperatureChange;
+    const {q_u, F_R} = solarPanelVars
+
+
+    T_fm = currentTemperature+ ((q_u)/(F_R * U_L))*(1-F_R)
+
+    return T_fm
 };
 
 const simulateTemperature = (params) => {
     // Destructuring parameters to use in the simulation
     const {
         area, efficiency, hour, duration, timeStep,
-        ambientTemperature, currentTankTemperature, cloudCover, specificHeat, mass, pumpPower
+        T_ambient, currentTankTemperature, cloudCover, specificHeat, mass_flow_rate, pumpPower
     } = params;
 
     // Array to hold temperature readings for each hour simulated
@@ -57,8 +79,8 @@ const simulateTemperature = (params) => {
     // Loop through each hour to simulate temperature changes
     for (let step = 0; step < duration; step++) {
         const currentHour = (hour + step) % 24; // Handle wrap-around for 24-hour clock
-        const heatAbsorbed = calculatePanelHeatAbsorption(currentHour, area, efficiency, cloudCover);
-        currentTemperature = calculateHeatTransferToFluid(heatAbsorbed, currentTemperature, specificHeat, mass, ambientTemperature, timeStep);
+        const solarPanelVars = calculatePanelUsefulEnergyGain(currentHour, area, mass_flow_rate, efficiency, cloudCover,specificHeat, T_ambient);
+        currentTemperature = calculateHeatTransferToFluid(solarPanelVars,currentTemperature);
 
         // Store each hour's temperature in the array
         temperatures.push({ time: currentHour, temp: currentTemperature });
@@ -68,5 +90,8 @@ const simulateTemperature = (params) => {
 };
 
 module.exports = {
-    simulateTemperature
+    simulateTemperature,
+    calculatePanelUsefulEnergyGain,
+    calculateHeatTransferToFluid,
+    getSolarIrradiance
 };

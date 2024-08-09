@@ -17,11 +17,11 @@ app.post('/simulate', (req, res) => {
         hour: parseInt(req.body.hour) || 12,
         duration: 24, 
         timeStep: 3600,
-        ambientTemperature: (parseFloat(req.body.ambientTemperature) - 32) * 5 / 9 || 25, // Convert to Celsius
+        T_ambient: (parseFloat(req.body.T_ambient) - 32) * 5 / 9 || 25, // Convert to Celsius
         cloudCover: parseFloat(req.body.cloudCover) || 0, // Default cloud cover percentage
         currentTankTemperature: (parseFloat(req.body.currentTankTemperature) - 32) * 5 / 9 || 20, // Convert to Celsius
         specificHeat: parseFloat(req.body.specificHeat) || 4186,
-        mass: parseFloat(req.body.mass) || 100
+        mass_flow_rate: parseFloat(req.body.mass_flow_rate) || .03
       };
 
     const temperatures = simulateTemperature(params).map(temp => ({
