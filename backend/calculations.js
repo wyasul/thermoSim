@@ -44,32 +44,48 @@ const getSolarIrradiance = (hour, cloudCover = 0) => {
  * 
  * @param {number} hour - The hour of the day (0-23). User input.
  * @param {number} area - The area of the solar panel in m². User input.
- * @param {number} mass_flow_rate - The mass flow rate of the fluid in kg/s. User input.
  * @param {number} efficiency - The efficiency of the solar panel (0-1). User input.
  * @param {number} cloudCover - The cloud cover percentage (0-1). User input.
  * @param {number} specificHeat - The specific heat of the fluid in J/(kg·K). User input.
  * @param {number} T_ambient - The ambient temperature in °C, default is 15°C. User input.
  * @param {number} T_plate - The initial plate temperature in °C, default is 20°C. User input.
  * @param {number} U_L - The overall heat loss coefficient in W/(m²·K), default is 8. Assumed to be independent of temperature. User input.
+ * @param {number} pumpPower - The power of the pump.
+ * @param {number} hydraulicHead - The hydraulic head, default is 5.
+ * @param {number} pumpEfficiency - The pump efficiency, default is 0.7.
  * 
  * @returns {Object} An object containing:
  *   - q_u: The useful energy gain per unit area in MJ/(m²·h).
  *   - F_R: The heat removal factor.
  *   - F_prime_prime: The collector flow factor.
  */
-const calculatePanelUsefulEnergyGain = (hour, area, mass_flow_rate, efficiency, cloudCover, specificHeat, T_ambient=15,T_plate, transmittance, absorptance, U_L=8) => {
-    // console.log(T_plate)
+const calculatePanelUsefulEnergyGain = (hour, area, efficiency, cloudCover, specificHeat, T_ambient=15, T_plate, transmittance, absorptance, U_L=8, pumpPower, hydraulicHead = 5, pumpEfficiency = 0.7) => {
+    const density = 1000; // Density of water in kg/m³
+    const gravity = 9.81; // Acceleration due to gravity in m/s²
+
+    // Calculate mass flow rate
+    const volumetricFlowRate = (pumpPower * pumpEfficiency) / (hydraulicHead * gravity * density); // m³/s
+    const mass_flow_rate = volumetricFlowRate * density; // kg/s
+
     // Hottel-Whillier-Bliss: Qu=Ac[S−UL(Tplate−Tambient)]
     const F_prime = efficiency; // Plate efficiency factor, user input
 
-    // Capacitance rate calculated according to mC/A(U_L)F'
-    const capacitance_rate = (mass_flow_rate * specificHeat)/(area * U_L * F_prime);
+    let F_R, F_prime_prime;
 
-    // F'' - collector flow factor
-    F_prime_prime = capacitance_rate * (1 - Math.exp(-1 / capacitance_rate));
+    if (mass_flow_rate > 0) {
+        // Capacitance rate calculated according to mC/A(U_L)F'
+        const capacitance_rate = (mass_flow_rate * specificHeat)/(area * U_L * F_prime);
 
-    // F_R - Heat removal factor according to F'(F'')
-    F_R = F_prime_prime * F_prime;
+        // F'' - collector flow factor
+        F_prime_prime = capacitance_rate * (1 - Math.exp(-1 / capacitance_rate));
+
+        // F_R - Heat removal factor according to F'(F'')
+        F_R = F_prime_prime * F_prime;
+    } else {
+        // When there's no flow, F_R approaches 0
+        F_R = 0;
+        F_prime_prime = 0;
+    }
     
     const solarIrradiance = getSolarIrradiance(hour, cloudCover)
 
@@ -81,29 +97,45 @@ const calculatePanelUsefulEnergyGain = (hour, area, mass_flow_rate, efficiency, 
     
     // Average useful energy gain per unit area
     const q_u = Q_u / area;
-    // Log all variables with labels
-    console.log('Hour:', hour);
-    console.log('Area:', area, 'm²');
-    console.log('Mass Flow Rate:', mass_flow_rate, 'kg/s');
-    console.log('Efficiency:', efficiency);
-    console.log('Cloud Cover:', cloudCover);
-    console.log('Specific Heat:', specificHeat, 'J/(kg·K)');
-    console.log('Ambient Temperature:', T_ambient, '°C');
-    console.log('Plate Temperature:', T_plate, '°C');
-    console.log('Transmittance:', transmittance);
-    console.log('Absorptance:', absorptance);
-    console.log('Overall Heat Loss Coefficient:', U_L, 'W/(m²·K)');
-    console.log('F_prime:', F_prime);
-    console.log('Capacitance Rate:', capacitance_rate);
-    console.log('F_prime_prime:', F_prime_prime);
-    console.log('F_R:', F_R);
-    console.log('Solar Irradiance:', solarIrradiance, 'MJ/(m²·h)');
-    console.log('U_L_Temp_Quotient:', U_L_Temp_Quotient, 'MJ/(m²·h)');
-    console.log('Q_u:', Q_u, 'MJ/h');
-    console.log('q_u:', q_u, 'MJ/(m²·h)');
 
     return {q_u: q_u, F_R: F_R, F_prime_prime: F_prime_prime}
 };
+
+const calculateHeatTransferToTank = (fluidTemp, tankTemp, tankVolume, specificHeat, timeStep, pumpPower, hydraulicHead = 5, pumpEfficiency = 0.7) => {
+    const density = 1000; // Density of water in kg/m³ (approximately for water at room temperature)
+    const gravity = 9.81; // Acceleration due to gravity in m/s²
+
+    // Calculate the effective mass flow rate using pump power
+    const calculatedMassFlowRate = (pumpPower * pumpEfficiency) / (hydraulicHead * gravity * density); // m³/s
+    var massFlowRate = calculatedMassFlowRate * density; // Converting m³/s to kg/s by multiplying with the density of water
+
+    // Calculate the rate of heat transfer (Q = m * c_p * ΔT)
+    const heatTransferRate = massFlowRate * specificHeat * (fluidTemp - tankTemp); // Joules/s or Watts
+
+    // Calculate the thermal capacity of the tank's volume
+    const thermalCapacity = tankVolume * density * specificHeat; // J/°C
+
+    // Calculate temperature change in the tank over the time step
+    const tankTempChange = (heatTransferRate * timeStep) / thermalCapacity; // °C
+
+    // New tank temperature after time step
+    const newTankTemp = tankTemp + tankTempChange;
+
+    // Debugging logs to track values
+    console.log(fluidTemp)
+    console.log('Time step: ', timeStep)
+    console.log('Pump power: ', pumpPower)
+    console.log(`Calculated Mass Flow Rate: ${calculatedMassFlowRate.toFixed(6)} m³/s`);
+    console.log(`Effective Mass Flow Rate: ${massFlowRate.toFixed(2)} kg/s`);
+    console.log(`Heat Transfer Rate: ${heatTransferRate.toFixed(2)} Watts`);
+    console.log(`Tank Thermal Capacity: ${thermalCapacity.toFixed(2)} J/°C`);
+    console.log(`Tank Temp Change: ${tankTempChange.toFixed(2)} °C`);
+    console.log(`Initial Tank Temp: ${tankTemp.toFixed(2)} °C`);
+    console.log(`New Tank Temp: ${newTankTemp.toFixed(2)} °C`);
+
+    return newTankTemp; // Return the new temperature of the tank
+};
+
 
 /**
  * Calculates the heat transfer to the fluid and the resulting temperatures in a solar panel.
@@ -125,12 +157,24 @@ const calculatePanelUsefulEnergyGain = (hour, area, mass_flow_rate, efficiency, 
 const calculateHeatTransferToFluid = (solarPanelVars, currentFluidTemp, U_L=8) => {
     const {q_u, F_R, F_prime_prime} = solarPanelVars;
 
-    // Equation 6.9.4 in Duffie & Beckman
-    let T_fluid = currentFluidTemp + ((q_u) / (F_R * U_L)) * (1 - F_prime_prime);
-    let T_plate = currentFluidTemp + ((q_u) / (F_R * U_L)) * (1 - F_R);
+    if (F_R === 0) {
+        // When F_R is 0, no heat is being removed from the collector
+        // The fluid temperature remains unchanged
+        // The plate temperature will increase based on the useful energy gain
+        let T_fluid = currentFluidTemp;
+        let T_plate = currentFluidTemp + (q_u / U_L);
 
-    return {T_fluid, T_plate};
+        return {T_fluid, T_plate};
+    } else {
+        // Equation 6.9.4 in Duffie & Beckman
+        let T_fluid = currentFluidTemp + ((q_u) / (F_R * U_L)) * (1 - F_prime_prime);
+        let T_plate = currentFluidTemp + ((q_u) / (F_R * U_L)) * (1 - F_R);
+
+        return {T_fluid, T_plate};
+    }
 };
+
+
 
 
 /**
@@ -151,34 +195,42 @@ const calculateHeatTransferToFluid = (solarPanelVars, currentFluidTemp, U_L=8) =
  *   @param {number} startPlateTemp - The initial temperature of the plate in °C.
  *   @param {number} cloudCover - The cloud cover percentage (0-1).
  *   @param {number} specificHeat - The specific heat of the fluid in J/(kg·K).
- *   @param {number} mass_flow_rate - The mass flow rate of the fluid in kg/s.
- *   @param {number} pumpPower - The power of the pump (not currently used).
+ *   @param {number} pumpPower - The power of the pump.
+ *   @param {number} hydraulicHead - The hydraulic head, default is 5.
+ *   @param {number} pumpEfficiency - The pump efficiency, default is 0.7.
+ *   @param {number} startFluidTemp - The initial temperature of the fluid in °C.
+ *   @param {number} transmittance - The transmittance of the cover plate.
+ *   @param {number} absorptance - The absorptance of the plate.
+ *   @param {number} tankVolume - The volume of the tank in m³.
+ *   @param {number} tankTemp - The initial temperature of the tank in °C.
  * 
  * @returns {Array} An array of objects, each containing:
  *   - time: The hour of the day (0-23).
  *   - temp: The fluid temperature at that hour in °C.
  */
 const simulateTemperature = (params) => {
-    const {
+    var {
         area, efficiency, hour, duration, timeStep,
-        T_ambient, cloudCover, specificHeat, mass_flow_rate, pumpPower, startFluidTemp, transmittance, absorptance
+        T_ambient, cloudCover, specificHeat, pumpPower, startFluidTemp, transmittance, absorptance, tankVolume, tankTemp
     } = params;
 
     let temperatures = [];
     let currentFluidTemp = startFluidTemp;
     let currentPlateTemp = startFluidTemp;
-
+    let currentTankTemp = tankTemp;
     for (let step = 0; step < duration; step++) {
         const currentHour = (hour + step) % 24;  // Handle wrap-around for 24-hour clock
-        console.log(currentPlateTemp)
         
-        const solarPanelVars = calculatePanelUsefulEnergyGain(currentHour, area, mass_flow_rate, efficiency, cloudCover, specificHeat, T_ambient, currentPlateTemp, transmittance, absorptance);
+        const solarPanelVars = calculatePanelUsefulEnergyGain(currentHour, area, efficiency, cloudCover, specificHeat, T_ambient, currentPlateTemp, transmittance, absorptance, U_L=8, pumpPower, hydraulicHead = 5, pumpEfficiency = 0.7);
         
         let updatedTemps = calculateHeatTransferToFluid(solarPanelVars, currentFluidTemp, U_L=8);
         currentFluidTemp = updatedTemps.T_fluid;  // Update fluid temperature for the next hour
         currentPlateTemp = updatedTemps.T_plate;  // Update plate temperature for the next hour
 
-        temperatures.push({ time: currentHour, temp: currentFluidTemp });
+        currentTankTemp = calculateHeatTransferToTank(currentFluidTemp, currentTankTemp, tankVolume, specificHeat, timeStep, pumpPower, hydraulicHead = 5, pumpEfficiency = 0.7);
+
+
+        temperatures.push({ time: currentHour, temp: currentFluidTemp, tankTemp: currentTankTemp});
     }
 
     return temperatures;
