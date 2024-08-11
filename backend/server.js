@@ -16,7 +16,7 @@ app.post('/simulate', (req, res) => {
         efficiency: parseFloat(req.body.efficiency) || 0.15,
         pumpPower: req.body.pumpPower !== undefined ? parseFloat(req.body.pumpPower) : 50,
         hour: parseInt(req.body.hour) || 12,
-        duration: 24,
+        duration: 1000,
         timeStep: 3600,
         T_ambient: fahrenheitToCelsius(parseFloat(req.body.T_ambient) || 77), // Convert to Celsius
         cloudCover: parseFloat(req.body.cloudCover) || 0,
@@ -26,11 +26,15 @@ app.post('/simulate', (req, res) => {
         absorptance: parseFloat(req.body.absorptance) || 0.95, // Add absorptance
         tankVolume: parseFloat(req.body.tankVolume) || 1000,
         tankTemp: fahrenheitToCelsius(parseFloat(req.body.tankTemp)) || 68,
+        pumpEfficiency: parseFloat(req.body.pumpEfficiency) || 0.7,
+        hydraulicHead: parseFloat(req.body.hydraulicHead) || 5,
+        U_L: parseFloat(req.body.U_L) || 8,
     };
 
     const temperatures = simulateTemperature(params).map(temp => ({
         time: temp.time,
-        temp: celsiusToFahrenheit(temp.temp), // Convert back to Fahrenheit
+        fluidTemp: celsiusToFahrenheit(temp.fluidTemp), // Convert back to Fahrenheit
+        panelTemp: celsiusToFahrenheit(temp.panelTemp),
         tankTemp: celsiusToFahrenheit(temp.tankTemp)
     }));
     res.json({ temperatures });
