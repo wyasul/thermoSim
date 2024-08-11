@@ -10,15 +10,15 @@ app.use(cors());
 app.use(express.json());
 
 app.post('/simulate', (req, res) => {
-
     const params = {
         area: parseFloat(req.body.area) || 2.0,
         efficiency: parseFloat(req.body.efficiency) || 0.15,
         pumpPower: req.body.pumpPower !== undefined ? parseFloat(req.body.pumpPower) : 50,
-        hour: parseInt(req.body.hour) || 12,
-        duration: 1000,
+        hour: req.body.hour !== undefined ? parseFloat(req.body.hour) : 0,
+        duration: 100,
         timeStep: 3600,
-        T_ambient: fahrenheitToCelsius(parseFloat(req.body.T_ambient) || 77), // Convert to Celsius
+        minAmbientTemp: fahrenheitToCelsius(parseFloat(req.body.minAmbientTemp) || 60),
+        maxAmbientTemp: fahrenheitToCelsius(parseFloat(req.body.maxAmbientTemp) || 80),
         cloudCover: parseFloat(req.body.cloudCover) || 0,
         specificHeat: parseFloat(req.body.specificHeat) || 4186,
         startFluidTemp: fahrenheitToCelsius(parseFloat(req.body.startFluidTemp)) || 68,
@@ -35,7 +35,8 @@ app.post('/simulate', (req, res) => {
         time: temp.time,
         fluidTemp: celsiusToFahrenheit(temp.fluidTemp), // Convert back to Fahrenheit
         panelTemp: celsiusToFahrenheit(temp.panelTemp),
-        tankTemp: celsiusToFahrenheit(temp.tankTemp)
+        tankTemp: celsiusToFahrenheit(temp.tankTemp),
+        ambientTemp: celsiusToFahrenheit(temp.ambientTemp)
     }));
     res.json({ temperatures });
 });

@@ -141,10 +141,10 @@ const calculateHeatTransferToFluid = (solarPanelVars, currentFluidTemp, U_L) => 
         return {T_fluid, T_plate};
     } else {
 
-        // Equation 6.9.4 in Duffie & Beckman, and need to convert to MJ/m²/h
-        T_fluid = currentFluidTemp + (((10e4*q_u)/3600) / (F_R * U_L) * (1 - F_prime_prime));
-        T_plate = currentFluidTemp + (((10e4*q_u)/3600) / (F_R * U_L) * (1 - F_R));
+        const q_u_joules_per_second = (q_u * 1e6) / 3600;
 
+        T_fluid = currentFluidTemp + ((q_u_joules_per_second) / (F_R * U_L) * (1 - F_prime_prime));
+        T_plate = currentFluidTemp + ((q_u_joules_per_second) / (F_R * U_L) * (1 - F_R));
 
         return {T_fluid, T_plate};
     }
@@ -202,7 +202,8 @@ const calculateHeatTransferToTank = (fluidTemp, tankTemp, tankVolume, specificHe
  * @param {number} params.hour - Starting hour of simulation (0-23)
  * @param {number} params.duration - Simulation duration in hours
  * @param {number} params.timeStep - Time step for simulation in seconds
- * @param {number} params.T_ambient - Ambient temperature in °C
+ * @param {number} params.minAmbientTemp - Minimum ambient temperature in °C
+ * @param {number} params.maxAmbientTemp - Maximum ambient temperature in °C
  * @param {number} params.cloudCover - Cloud cover percentage (0-100)
  * @param {number} params.specificHeat - Specific heat of fluid in J/(kg·K)
  * @param {number} params.pumpPower - Pump power in Watts
@@ -211,36 +212,47 @@ const calculateHeatTransferToTank = (fluidTemp, tankTemp, tankVolume, specificHe
  * @param {number} params.absorptance - Plate absorptance
  * @param {number} params.tankVolume - Tank volume in m³
  * @param {number} params.tankTemp - Initial tank temperature in °C
+ * @param {number} params.U_L - Overall heat loss coefficient in W/(m²·K)
+ * @param {number} params.hydraulicHead - Hydraulic head in meters
+ * @param {number} params.pumpEfficiency - Pump efficiency (0-1)
+ * 
  * @returns {Array<Object>} Array of hourly temperature data
  */
 const simulateTemperature = (params) => {
     var {
         area, efficiency, hour, duration, timeStep,
-        T_ambient, cloudCover, specificHeat, pumpPower, startFluidTemp, transmittance, absorptance, tankVolume, tankTemp, U_L, hydraulicHead, pumpEfficiency
+        minAmbientTemp, maxAmbientTemp, cloudCover, specificHeat, pumpPower, startFluidTemp, transmittance, absorptance, tankVolume, tankTemp, U_L, hydraulicHead, pumpEfficiency
     } = params;
-    // console.log(params);
 
     let temperatures = [];
     let currentFluidTemp = startFluidTemp;
     let currentPlateTemp = startFluidTemp;
     let currentTankTemp = tankTemp;
-    // temperatures.push({ time: hour, fluidTemp: currentFluidTemp, panelTemp: currentPlateTemp, tankTemp: currentTankTemp});
+
     for (let step = 0; step < duration; step++) {
         const currentHour = (hour + step) % 24;  // Handle wrap-around for 24-hour clock
-        
-        const solarPanelVars = calculatePanelUsefulEnergyGain(currentHour, area, efficiency, cloudCover, specificHeat, T_ambient, currentPlateTemp, transmittance, absorptance, U_L, pumpPower, hydraulicHead, pumpEfficiency);
+
+        // Calculate ambient temperature using sine wave interpolation
+        const tempAmplitude = (maxAmbientTemp - minAmbientTemp) / 2;
+        const tempMidpoint = (maxAmbientTemp + minAmbientTemp) / 2;
+        const currentAmbientTemp = tempMidpoint + tempAmplitude * Math.sin((currentHour - 6) * Math.PI / 12);
+
+        const solarPanelVars = calculatePanelUsefulEnergyGain(currentHour, area, efficiency, cloudCover, specificHeat, currentAmbientTemp, currentPlateTemp, transmittance, absorptance, U_L, pumpPower, hydraulicHead, pumpEfficiency);
         
         let updatedTemps = calculateHeatTransferToFluid(solarPanelVars, currentFluidTemp, U_L);
-        currentFluidTemp = updatedTemps.T_fluid;  // Update fluid temperature for the next hour
-        currentPlateTemp = updatedTemps.T_plate;  // Update plate temperature for the next hour
+        currentFluidTemp = updatedTemps.T_fluid;
+        currentPlateTemp = updatedTemps.T_plate;
 
         currentTankTemp = calculateHeatTransferToTank(currentFluidTemp, currentTankTemp, tankVolume, specificHeat, timeStep, pumpPower, hydraulicHead, pumpEfficiency);
 
-
-        temperatures.push({ time: currentHour, fluidTemp: currentFluidTemp, panelTemp: currentPlateTemp, tankTemp: currentTankTemp});
-        console.log(temperatures);
+        temperatures.push({ 
+            time: (currentHour+1)%24, 
+            fluidTemp: currentFluidTemp, 
+            panelTemp: currentPlateTemp, 
+            tankTemp: currentTankTemp,
+            ambientTemp: currentAmbientTemp
+        });
     }
-
 
     return temperatures;
 };
