@@ -218,12 +218,13 @@ const simulateTemperature = (params) => {
         area, efficiency, hour, duration, timeStep,
         T_ambient, cloudCover, specificHeat, pumpPower, startFluidTemp, transmittance, absorptance, tankVolume, tankTemp, U_L, hydraulicHead, pumpEfficiency
     } = params;
-    console.log(params);
+    // console.log(params);
 
     let temperatures = [];
     let currentFluidTemp = startFluidTemp;
     let currentPlateTemp = startFluidTemp;
     let currentTankTemp = tankTemp;
+    // temperatures.push({ time: hour, fluidTemp: currentFluidTemp, panelTemp: currentPlateTemp, tankTemp: currentTankTemp});
     for (let step = 0; step < duration; step++) {
         const currentHour = (hour + step) % 24;  // Handle wrap-around for 24-hour clock
         
@@ -237,6 +238,7 @@ const simulateTemperature = (params) => {
 
 
         temperatures.push({ time: currentHour, fluidTemp: currentFluidTemp, panelTemp: currentPlateTemp, tankTemp: currentTankTemp});
+        console.log(temperatures);
     }
 
 

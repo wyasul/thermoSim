@@ -23,7 +23,7 @@ describe('Solar Irradiance Calculations', () => {
 describe('Panel Useful Energy Gain Calculations', () => {
   test('example from textbook, returns expected values for high efficiency and flow rate', () => {
     const highEfficiencyParams = {
-      hour: 11,
+      hour: 0,
       area: 2,
       efficiency: 0.841,
       cloudCover: 0,
