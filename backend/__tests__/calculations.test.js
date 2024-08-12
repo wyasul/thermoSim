@@ -23,12 +23,12 @@ describe('Solar Irradiance Calculations', () => {
 describe('Panel Useful Energy Gain Calculations', () => {
   test('example from textbook, returns expected values for high efficiency and flow rate', () => {
     const highEfficiencyParams = {
-      hour: 0,
+      hour: 11,
       area: 2,
       efficiency: 0.841,
       cloudCover: 0,
       specificHeat: 4186,
-      T_ambient: 2,
+      T_ambient: null,
       T_plate: 40,
       transmittance: 1,
       absorptance: 1,
@@ -36,7 +36,8 @@ describe('Panel Useful Energy Gain Calculations', () => {
       pumpPower: 50,
       hydraulicHead: 10,
       pumpEfficiency: 0.8,
-      mass_flow_rate: 0.03
+      mass_flow_rate: 0.03,
+      testAmbient: 2
     };
     const result = calculatePanelUsefulEnergyGain(...Object.values(highEfficiencyParams));
     expect(result.F_prime_prime).toBeGreaterThanOrEqual(0.94);
