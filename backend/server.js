@@ -15,7 +15,7 @@ app.post('/simulate', (req, res) => {
         efficiency: parseFloat(req.body.efficiency) || 0.15,
         pumpPower: req.body.pumpPower !== undefined ? parseFloat(req.body.pumpPower) : 50,
         hour: req.body.hour !== undefined ? parseFloat(req.body.hour) : 0,
-        duration: 24,
+        duration: parseFloat(req.body.duration) || 24,
         timeStep: 3600,
         minAmbientTemp: fahrenheitToCelsius(parseFloat(req.body.minAmbientTemp) || 60),
         maxAmbientTemp: fahrenheitToCelsius(parseFloat(req.body.maxAmbientTemp) || 80),
