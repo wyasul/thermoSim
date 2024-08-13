@@ -240,32 +240,49 @@ const calculateHeatTransferToTank = (fluidTemp, tankTemp, tankVolume, specificHe
  * 
  * @returns {Array<Object>} Array of hourly temperature data
  */
-const simulateTemperature = (params) => {
-    var {
-        area, efficiency, hour, duration, timeStep,
-        minAmbientTemp, maxAmbientTemp, cloudCover, specificHeat, pumpPower, startFluidTemp, transmittance, absorptance, tankVolume, tankTemp, U_L, hydraulicHead, pumpEfficiency
-    } = params;
-
+const simulateTemperature = (initialParams, inputChanges) => {
     let temperatures = [];
-    let currentFluidTemp = startFluidTemp;
-    let currentPlateTemp = startFluidTemp;
-    let currentTankTemp = tankTemp;
+    let currentParams = { ...initialParams };
+    let currentFluidTemp = initialParams.startFluidTemp;
+    let currentPlateTemp = initialParams.startFluidTemp;
+    let currentTankTemp = initialParams.tankTemp;
 
-    for (let step = 0; step < duration; step++) {
-        const currentHour = (hour + step) % 24;  // Handle wrap-around for 24-hour clock
+    for (let step = 0; step < initialParams.duration; step++) {
+        // Apply any input changes for this hour
+        if (inputChanges[step]) {
+            currentParams = { ...currentParams, ...inputChanges[step] };
+            // If fluid or tank temperature is changed, update the current temperatures
+            if (inputChanges[step].startFluidTemp !== undefined) {
+                currentFluidTemp = inputChanges[step].startFluidTemp;
+                currentPlateTemp = inputChanges[step].startFluidTemp;
+            }
+            if (inputChanges[step].tankTemp !== undefined) {
+                currentTankTemp = inputChanges[step].tankTemp;
+            }
+        }
+
+        const currentHour = (initialParams.hour + step) % 24;
 
         // Calculate ambient temperature using sine wave interpolation
-        const tempAmplitude = (maxAmbientTemp - minAmbientTemp) / 2;
-        const tempMidpoint = (maxAmbientTemp + minAmbientTemp) / 2;
+        const tempAmplitude = (currentParams.maxAmbientTemp - currentParams.minAmbientTemp) / 2;
+        const tempMidpoint = (currentParams.maxAmbientTemp + currentParams.minAmbientTemp) / 2;
         const currentAmbientTemp = tempMidpoint + tempAmplitude * Math.sin((currentHour - 6) * Math.PI / 12);
 
-        const solarPanelVars = calculatePanelUsefulEnergyGain(currentHour, area, efficiency, cloudCover, specificHeat, currentAmbientTemp, currentPlateTemp, transmittance, absorptance, U_L, pumpPower, hydraulicHead, pumpEfficiency);
+        const solarPanelVars = calculatePanelUsefulEnergyGain(
+            currentHour, currentParams.area, currentParams.efficiency, currentParams.cloudCover,
+            currentParams.specificHeat, currentAmbientTemp, currentPlateTemp, currentParams.transmittance,
+            currentParams.absorptance, currentParams.U_L, currentParams.pumpPower,
+            currentParams.hydraulicHead, currentParams.pumpEfficiency
+        );
         
-        let updatedTemps = calculateHeatTransferToFluid(solarPanelVars, currentFluidTemp, U_L);
+        let updatedTemps = calculateHeatTransferToFluid(solarPanelVars, currentFluidTemp, currentParams.U_L);
         currentFluidTemp = updatedTemps.T_fluid;
         currentPlateTemp = updatedTemps.T_plate;
 
-        currentTankTemp = calculateHeatTransferToTank(currentFluidTemp, currentTankTemp, tankVolume, specificHeat, timeStep, pumpPower, hydraulicHead, pumpEfficiency);
+        currentTankTemp = calculateHeatTransferToTank(
+            currentFluidTemp, currentTankTemp, currentParams.tankVolume, currentParams.specificHeat,
+            currentParams.timeStep, currentParams.pumpPower, currentParams.hydraulicHead, currentParams.pumpEfficiency
+        );
 
         temperatures.push({ 
             time: currentHour,
