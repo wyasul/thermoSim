@@ -33,22 +33,6 @@ app.post('/simulate', (req, res) => {
 
     const inputChanges = req.body.inputChanges || {};
 
-    // Convert input changes temperatures to Celsius
-    for (const hour in inputChanges) {
-        if (inputChanges[hour].minAmbientTemp) {
-            inputChanges[hour].minAmbientTemp = fahrenheitToCelsius(inputChanges[hour].minAmbientTemp);
-        }
-        if (inputChanges[hour].maxAmbientTemp) {
-            inputChanges[hour].maxAmbientTemp = fahrenheitToCelsius(inputChanges[hour].maxAmbientTemp);
-        }
-        if (inputChanges[hour].startFluidTemp) {
-            inputChanges[hour].startFluidTemp = fahrenheitToCelsius(inputChanges[hour].startFluidTemp);
-        }
-        if (inputChanges[hour].tankTemp) {
-            inputChanges[hour].tankTemp = fahrenheitToCelsius(inputChanges[hour].tankTemp);
-        }
-    }
-
     const temperatures = simulateTemperature(initialParams, inputChanges).map(temp => ({
         time: temp.time,
         fluidTemp: celsiusToFahrenheit(temp.fluidTemp),
