@@ -29,11 +29,29 @@ app.post('/simulate', (req, res) => {
         pumpEfficiency: parseFloat(req.body.pumpEfficiency) || 0.7,
         hydraulicHead: parseFloat(req.body.hydraulicHead) || 5,
         U_L: parseFloat(req.body.U_L) || 8,
+        currentState: req.body.currentState || null
     };
 
     const inputChanges = req.body.inputChanges || {};
+    const startStep = req.body.startHour || 0;
 
-    const temperatures = simulateTemperature(initialParams, inputChanges).map(temp => ({
+    // Convert input changes temperatures to Celsius
+    for (const hour in inputChanges) {
+        if (inputChanges[hour].minAmbientTemp) {
+            inputChanges[hour].minAmbientTemp = fahrenheitToCelsius(inputChanges[hour].minAmbientTemp);
+        }
+        if (inputChanges[hour].maxAmbientTemp) {
+            inputChanges[hour].maxAmbientTemp = fahrenheitToCelsius(inputChanges[hour].maxAmbientTemp);
+        }
+        if (inputChanges[hour].startFluidTemp) {
+            inputChanges[hour].startFluidTemp = fahrenheitToCelsius(inputChanges[hour].startFluidTemp);
+        }
+        if (inputChanges[hour].tankTemp) {
+            inputChanges[hour].tankTemp = fahrenheitToCelsius(inputChanges[hour].tankTemp);
+        }
+    }
+
+    const temperatures = simulateTemperature(initialParams, inputChanges, startStep).map(temp => ({
         time: temp.time,
         fluidTemp: celsiusToFahrenheit(temp.fluidTemp),
         panelTemp: celsiusToFahrenheit(temp.panelTemp),

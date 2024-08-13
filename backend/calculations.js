@@ -1,3 +1,6 @@
+const { fahrenheitToCelsius } = require('./utils');
+        
+
 /**
  * Calculates an approximation of solar irradiance for a given hour and cloud cover.
  * 
@@ -240,24 +243,31 @@ const calculateHeatTransferToTank = (fluidTemp, tankTemp, tankVolume, specificHe
  * 
  * @returns {Array<Object>} Array of hourly temperature data
  */
-const simulateTemperature = (initialParams, inputChanges) => {
+const simulateTemperature = (initialParams, inputChanges, startStep = 0) => {
     let temperatures = [];
     let currentParams = { ...initialParams };
     let currentFluidTemp = initialParams.startFluidTemp;
     let currentPlateTemp = initialParams.startFluidTemp;
     let currentTankTemp = initialParams.tankTemp;
 
-    for (let step = 0; step < initialParams.duration; step++) {
+    // If there's a currentState, use it to initialize the simulation
+    if (initialParams.currentState) {
+        currentFluidTemp = fahrenheitToCelsius(initialParams.currentState.fluidTemp);
+        currentPlateTemp = fahrenheitToCelsius(initialParams.currentState.panelTemp);
+        currentTankTemp = fahrenheitToCelsius(initialParams.currentState.tankTemp);
+    }
+
+    for (let step = startStep; step < initialParams.duration; step++) {
         // Apply any input changes for this hour
         if (inputChanges[step]) {
             currentParams = { ...currentParams, ...inputChanges[step] };
             // If fluid or tank temperature is changed, update the current temperatures
             if (inputChanges[step].startFluidTemp !== undefined) {
-                currentFluidTemp = inputChanges[step].startFluidTemp;
-                currentPlateTemp = inputChanges[step].startFluidTemp;
+                currentFluidTemp = (inputChanges[step].startFluidTemp);
+                currentPlateTemp = fahrenheitToCelsius(inputChanges[step].startFluidTemp);
             }
             if (inputChanges[step].tankTemp !== undefined) {
-                currentTankTemp = inputChanges[step].tankTemp;
+                currentTankTemp = fahrenheitToCelsius(inputChanges[step].tankTemp);
             }
         }
 
@@ -284,10 +294,11 @@ const simulateTemperature = (initialParams, inputChanges) => {
             currentParams.timeStep, currentParams.pumpPower, currentParams.hydraulicHead, currentParams.pumpEfficiency
         );
 
-        temperatures.push({ 
-            time: currentHour,
-            fluidTemp: currentFluidTemp, 
-            panelTemp: currentPlateTemp, 
+        // Add the temperature data to the results
+        temperatures.push({
+            time: step,
+            fluidTemp: currentFluidTemp,
+            panelTemp: currentPlateTemp,
             tankTemp: currentTankTemp,
             ambientTemp: currentAmbientTemp
         });
