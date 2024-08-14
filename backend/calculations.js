@@ -274,9 +274,14 @@ const simulateTemperature = (initialParams, inputChanges, startStep = 0) => {
         const currentHour = (initialParams.hour + step) % 24;
 
         // Calculate ambient temperature using sine wave interpolation
-        const tempAmplitude = (currentParams.maxAmbientTemp - currentParams.minAmbientTemp) / 2;
-        const tempMidpoint = (currentParams.maxAmbientTemp + currentParams.minAmbientTemp) / 2;
-        const currentAmbientTemp = tempMidpoint + tempAmplitude * Math.sin((currentHour - 6) * Math.PI / 12);
+        let currentAmbientTemp;
+        if (currentParams.fixedTemp !== null && currentParams.fixedTemp !== 'None') {
+            currentAmbientTemp = fahrenheitToCelsius(parseFloat(currentParams.fixedTemp));
+        } else {
+            const tempAmplitude = (currentParams.maxAmbientTemp - currentParams.minAmbientTemp) / 2;
+            const tempMidpoint = (currentParams.maxAmbientTemp + currentParams.minAmbientTemp) / 2;
+            currentAmbientTemp = tempMidpoint + tempAmplitude * Math.sin((currentHour - 6) * Math.PI / 12);
+        }
 
         const solarPanelVars = calculatePanelUsefulEnergyGain(
             currentHour, currentParams.area, currentParams.efficiency, currentParams.cloudCover,

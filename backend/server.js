@@ -29,8 +29,9 @@ app.post('/simulate', (req, res) => {
         pumpEfficiency: parseFloat(req.body.pumpEfficiency) || 0.7,
         hydraulicHead: parseFloat(req.body.hydraulicHead) || 5,
         U_L: parseFloat(req.body.U_L) || 8,
-        currentState: req.body.currentState || null
-    };
+        currentState: req.body.currentState || null,
+        fixedTemp: req.body.fixedTemp === 'None' ? null : fahrenheitToCelsius(parseFloat(req.body.fixedTemp))   
+        };
 
     const inputChanges = req.body.inputChanges || {};
     const startStep = req.body.startHour || 0;
