@@ -21,7 +21,7 @@ app.post('/simulate', (req, res) => {
         maxAmbientTemp: fahrenheitToCelsius(parseFloat(req.body.maxAmbientTemp) || 80),
         cloudCover: parseFloat(req.body.cloudCover) || 0,
         specificHeat: parseFloat(req.body.specificHeat) || 4186,
-        startFluidTemp: fahrenheitToCelsius(parseFloat(req.body.startFluidTemp)) || 68,
+        fluidTemp: fahrenheitToCelsius(parseFloat(req.body.fluidTemp)) || 68,
         transmittance: parseFloat(req.body.transmittance) || 0.9,
         absorptance: parseFloat(req.body.absorptance) || 0.95,
         tankVolume: parseFloat(req.body.tankVolume) || 1000,
@@ -44,8 +44,8 @@ app.post('/simulate', (req, res) => {
         if (inputChanges[hour].maxAmbientTemp) {
             inputChanges[hour].maxAmbientTemp = fahrenheitToCelsius(inputChanges[hour].maxAmbientTemp);
         }
-        if (inputChanges[hour].startFluidTemp) {
-            inputChanges[hour].startFluidTemp = fahrenheitToCelsius(inputChanges[hour].startFluidTemp);
+        if (inputChanges[hour].fluidTemp) {
+            inputChanges[hour].fluidTemp = fahrenheitToCelsius(inputChanges[hour].fluidTemp);
         }
         if (inputChanges[hour].tankTemp) {
             inputChanges[hour].tankTemp = fahrenheitToCelsius(inputChanges[hour].tankTemp);

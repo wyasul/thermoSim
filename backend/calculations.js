@@ -232,7 +232,7 @@ const calculateHeatTransferToTank = (fluidTemp, tankTemp, tankVolume, specificHe
  * @param {number} params.cloudCover - Cloud cover percentage (0-100)
  * @param {number} params.specificHeat - Specific heat of fluid in J/(kg·K)
  * @param {number} params.pumpPower - Pump power in Watts
- * @param {number} params.startFluidTemp - Initial fluid temperature in °C
+ * @param {number} params.fluidTemp - Initial fluid temperature in °C
  * @param {number} params.transmittance - Cover plate transmittance
  * @param {number} params.absorptance - Plate absorptance
  * @param {number} params.tankVolume - Tank volume in m³
@@ -246,8 +246,8 @@ const calculateHeatTransferToTank = (fluidTemp, tankTemp, tankVolume, specificHe
 const simulateTemperature = (initialParams, inputChanges, startStep = 0) => {
     let temperatures = [];
     let currentParams = { ...initialParams };
-    let currentFluidTemp = initialParams.startFluidTemp;
-    let currentPlateTemp = initialParams.startFluidTemp;
+    let currentFluidTemp = initialParams.fluidTemp;
+    let currentPlateTemp = initialParams.fluidTemp;
     let currentTankTemp = initialParams.tankTemp;
 
     // If there's a currentState, use it to initialize the simulation
@@ -262,9 +262,9 @@ const simulateTemperature = (initialParams, inputChanges, startStep = 0) => {
         if (inputChanges[step]) {
             currentParams = { ...currentParams, ...inputChanges[step] };
             // If fluid or tank temperature is changed, update the current temperatures
-            if (inputChanges[step].startFluidTemp !== undefined) {
-                currentFluidTemp = (inputChanges[step].startFluidTemp);
-                currentPlateTemp = fahrenheitToCelsius(inputChanges[step].startFluidTemp);
+            if (inputChanges[step].fluidTemp !== undefined) {
+                currentFluidTemp = (inputChanges[step].fluidTemp);
+                currentPlateTemp = fahrenheitToCelsius(inputChanges[step].fluidTemp);
             }
             if (inputChanges[step].tankTemp !== undefined) {
                 currentTankTemp = fahrenheitToCelsius(inputChanges[step].tankTemp);
