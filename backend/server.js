@@ -26,7 +26,7 @@ app.post('/simulate', (req, res) => {
         absorptance: parseFloat(req.body.absorptance) || 0.95,
         tankVolume: parseFloat(req.body.tankVolume) || 1000,
         tankTemp: fahrenheitToCelsius(parseFloat(req.body.tankTemp)) || 68,
-        pumpEfficiency: parseFloat(req.body.pumpEfficiency) || 0.7,
+        pumpEfficiency: parseFloat(req.body.pumpEfficiency)/100 || 0.7,
         hydraulicHead: parseFloat(req.body.hydraulicHead) || 5,
         U_L: parseFloat(req.body.U_L) || 8,
         currentState: req.body.currentState || null,
